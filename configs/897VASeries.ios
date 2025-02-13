@@ -1,0 +1,395 @@
+service tcp-keepalives-in
+service tcp-keepalives-out
+service timestamps debug datetime localtime show-timezone year
+service timestamps log datetime localtime show-timezone year
+service password-encryption
+service sequence-numbers
+service dhcp
+!
+hostname {{ hostname }}
+!
+logging buffered 51200 informational
+no logging console
+!
+aaa new-model
+aaa authentication login default local
+aaa authorization console
+aaa authorization exec default local
+!
+clock timezone <TZ_NAME> <HR> <MIN>
+!
+ntp server 1.au.pool.ntp.org
+ntp server 2.au.pool.ntp.org
+ntp server 3.au.pool.ntp.org
+!
+ip name-server {{ primary_dns }}
+ip name-server {{ secondary_dns }}
+ip domain name {{ suffix }}
+ip dns server
+!
+ipv6 unicast-routing
+ipv6 cef
+ip cef
+!
+ip inspect name FWv4 tcp router-traffic
+ip inspect name FWv4 udp router-traffic
+ip inspect name FWv4 icmp
+!
+lldp run
+cdp run
+!
+archive
+!
+username root privilege 15 secret {{ password }}
+!
+control-plane
+!
+banner motd ^C
+###########################################
+#                                         #
+#            !!! WARNING !!!              #
+#                                         #
+# Access to this device and the network   #
+# it protects is strictly prohibited      #
+# unless you are authorized.              #
+#                                         #
+# If you are unauthorized disconnect now! #
+#                                         #
+###########################################
+^C
+!
+no ip http server
+no ip http secure-server
+!
+crypto key generate rsa modulus 4096
+ip ssh time-out 60
+ip ssh version 2
+!
+policy-map PMAP-Speed-Child
+ class class-default
+  fair-queue
+  exit
+ exit
+policy-map PMAP-Speed-Parent
+ class class-default
+  shape average {{ bps }}
+   service-policy PMAP-Speed-Child
+  exit
+ exit
+!
+ip access-list extended ACL-INFRASTRUCTURE-IN
+ <fill your own ACL in>
+ remark "Port Forwards"
+ {% for pfwd_id, pfwd in port_forwards.items() -%}
+ {% if pfwd["source"] == "any" -%}
+ permit {{ pfwd["protocol"] }} {{ pfwd["source"] }} any eq {{ pfwd["src_port"] }}
+ {% else -%}
+ permit {{ pfwd["protocol"] }} host {{ pfwd["source"] }} any eq {{ pfwd["src_port"] }}
+ {% endif -%}
+ {% endfor -%}
+ deny ip any any
+ exit
+ip access-list extended ACL-SSH-IN
+ permit tcp 192.168.0.0 0.0.0.255 any eq 22
+ permit tcp 172.16.0.0 0.15.255.255 any eq 22
+ permit tcp 10.0.0.0 0.255.255.255 any eq 22
+ ! permit tcp host <PUBLIC HOSTS> any eq 22
+ exit
+ip access-list extended ACL-NAT
+ permit ip 192.168.0.0 0.0.255.255 any
+ permit ip 172.16.0.0 0.15.255.255 any
+ permit ip 10.0.0.0 0.255.255.255 any
+ deny ip any any
+ exit
+ip access-list extended ACL-INTRA_LAN-IN
+ deny ip 192.168.0.0 0.0.255.255 any
+ deny ip 172.16.0.0 0.15.255.255 any
+ deny ip 10.0.0.0 0.255.255.255 any
+ permit ip any any
+!
+{% for vlan_id, vlan in vlans.items() -%}
+interface Vlan{{ vlan_id }}
+ ip address {{ vlan["gateway"] }} {{ vlan["mask"] }}
+ no ipv6 address
+ ip access-group ACL-INTRA_LAN-IN in
+ no ip proxy-arp
+ no ip redirects
+ ip virtual-reassembly in
+ {% if vlan["helper_enabled"] == True -%}
+ ip helper-address {{ vlan["helper_addr"] }}
+ {% endif -%}
+ ip nat inside
+ ip tcp adjust-mss 1300
+ exit
+{% endfor -%}
+!
+{% for vlan_id, vlan in vlans.items() -%}
+vlan {{ vlan_id }}
+{% endfor -%}
+!
+{% for vlan_id, vlan in vlans.items() -%}
+{% if vlan["dhcpv4_enabled"] == True -%}
+ip dhcp excluded-address {{ vlan["dhcpv4_first"][0] }} {{ vlan["dhcpv4_last"][0] }}
+ip dhcp excluded-address {{ vlan["dhcpv4_first"][1] }} {{ vlan["dhcpv4_last"][1] }}
+{% endif -%}
+{% endfor -%}
+{% for vlan_id, vlan in vlans.items() -%}
+{% if vlan["dhcpv4_enabled"] == True -%}
+ip dhcp pool VLAN{{ vlan_id }}
+ network {{ vlan["network_addr"] }} {{ vlan["mask"] }}
+ dns-server {{ vlan["gateway"] }}
+ default-router {{ vlan["gateway"] }}
+ lease 0 6
+ exit
+{% endif -%}
+{% endfor -%}
+!
+{% if wan_type == "IPoE" -%}
+interface Vlan50
+ ip address dhcp
+ no ipv6 address
+ ip access-group ACL-INFRASTRUCTURE-IN in
+ no ip redirects
+ no ip proxy-arp
+ ip nat outside
+ ip inspect FWv4 out
+ ip virtual-reassembly in
+ ip tcp adjust-mss 1460
+ no cdp enable
+ service-policy output PMAP-Speed-Parent
+ no shut
+ exit
+{% elif wan_type == "Static IP" -%}
+interface Vlan50
+ ip address <IP ADDRESS>
+ no ipv6 address
+ ip access-group ACL-INFRASTRUCTURE-IN in
+ no ip redirects
+ no ip proxy-arp
+ ip nat outside
+ ip inspect FWv4 out
+ ip virtual-reassembly in
+ ip tcp adjust-mss 1460
+ no cdp enable
+ service-policy output PMAP-Speed-Parent
+ no shut
+ exit
+{% else -%}
+interface Dialer0
+ ip address negotiated
+ no ipv6 address
+ ip access-group ACL-INFRASTRUCTURE-IN in
+ no ip redirects
+ no ip proxy-arp
+ ip nat outside
+ ip inspect FWv4 out
+ ip virtual-reassembly in
+ encapsulation ppp
+ dialer pool 1
+ ppp authentication chap callin
+ ppp chap hostname <ISP USER>
+ ppp chap password <ISP PASS>
+ no cdp enable
+ mtu 1492
+ ip tcp adjust-mss 1452
+ service-policy output PMAP-Speed-Parent
+ no shut
+ exit
+interface Vlan50
+ pppoe enable group global
+ pppoe-client dial-pool-number 1
+ no shut
+ exit
+{% endif -%}
+interface GigabitEthernet0
+ desc WAN
+ switchport mode access
+ switchport access vlan 50
+ speed auto
+ duplex auto
+ no cdp enable
+ no lldp transmit
+ no shut
+ exit
+!
+interface GigabitEthernet1
+ {% if vlans|length > 1 -%}
+ {% for vlan_id, vlan in vlans.items() -%}
+ {% if vlan["native"] == True -%}
+ switchport trunk native vlan {{ vlan_id }}
+ {% endif -%}
+ {% endfor -%}
+ switchport mode trunk
+ switchport trunk allowed vlan all
+ {% else -%}
+ switchport mode access
+ {% for vlan_id, vlan in vlans.items() -%}
+ {% if vlan["native"] == True -%}
+ switchport trunk native vlan {{ vlan_id }}
+ {% endif -%}
+ {% endfor -%}
+ {% endif -%}
+ no shut
+ exit
+interface GigabitEthernet2
+ {% if vlans|length > 1 -%}
+ {% for vlan_id, vlan in vlans.items() -%}
+ {% if vlan["native"] == True -%}
+ switchport trunk native vlan {{ vlan_id }}
+ {% endif -%}
+ {% endfor -%}
+ switchport mode trunk
+ switchport trunk allowed vlan all
+ {% else -%}
+ switchport mode access
+ {% for vlan_id, vlan in vlans.items() -%}
+ {% if vlan["native"] == True -%}
+ switchport trunk native vlan {{ vlan_id }}
+ {% endif -%}
+ {% endfor -%}
+ {% endif -%}
+ no shut
+ exit
+interface GigabitEthernet3
+ {% if vlans|length > 1 -%}
+ {% for vlan_id, vlan in vlans.items() -%}
+ {% if vlan["native"] == True -%}
+ switchport trunk native vlan {{ vlan_id }}
+ {% endif -%}
+ {% endfor -%}
+ switchport mode trunk
+ switchport trunk allowed vlan all
+ {% else -%}
+ switchport mode access
+ {% for vlan_id, vlan in vlans.items() -%}
+ {% if vlan["native"] == True -%}
+ switchport trunk native vlan {{ vlan_id }}
+ {% endif -%}
+ {% endfor -%}
+ {% endif -%}
+ no shut
+ exit
+interface GigabitEthernet4
+ {% if vlans|length > 1 -%}
+ {% for vlan_id, vlan in vlans.items() -%}
+ {% if vlan["native"] == True -%}
+ switchport trunk native vlan {{ vlan_id }}
+ {% endif -%}
+ {% endfor -%}
+ switchport mode trunk
+ switchport trunk allowed vlan all
+ {% else -%}
+ switchport mode access
+ {% for vlan_id, vlan in vlans.items() -%}
+ {% if vlan["native"] == True -%}
+ switchport trunk native vlan {{ vlan_id }}
+ {% endif -%}
+ {% endfor -%}
+ {% endif -%}
+ no shut
+ exit
+interface GigabitEthernet5
+ {% if vlans|length > 1 -%}
+ {% for vlan_id, vlan in vlans.items() -%}
+ {% if vlan["native"] == True -%}
+ switchport trunk native vlan {{ vlan_id }}
+ {% endif -%}
+ {% endfor -%}
+ switchport mode trunk
+ switchport trunk allowed vlan all
+ {% else -%}
+ switchport mode access
+ {% for vlan_id, vlan in vlans.items() -%}
+ {% if vlan["native"] == True -%}
+ switchport trunk native vlan {{ vlan_id }}
+ {% endif -%}
+ {% endfor -%}
+ {% endif -%}
+ no shut
+ exit
+interface GigabitEthernet6
+ {% if vlans|length > 1 -%}
+ {% for vlan_id, vlan in vlans.items() -%}
+ {% if vlan["native"] == True -%}
+ switchport trunk native vlan {{ vlan_id }}
+ {% endif -%}
+ {% endfor -%}
+ switchport mode trunk
+ switchport trunk allowed vlan all
+ {% else -%}
+ switchport mode access
+ {% for vlan_id, vlan in vlans.items() -%}
+ {% if vlan["native"] == True -%}
+ switchport trunk native vlan {{ vlan_id }}
+ {% endif -%}
+ {% endfor -%}
+ {% endif -%}
+ no shut
+ exit
+interface GigabitEthernet7
+ {% if vlans|length > 1 -%}
+ {% for vlan_id, vlan in vlans.items() -%}
+ {% if vlan["native"] == True -%}
+ switchport trunk native vlan {{ vlan_id }}
+ {% endif -%}
+ {% endfor -%}
+ switchport mode trunk
+ switchport trunk allowed vlan all
+ {% else -%}
+ switchport mode access
+ {% for vlan_id, vlan in vlans.items() -%}
+ {% if vlan["native"] == True -%}
+ switchport trunk native vlan {{ vlan_id }}
+ {% endif -%}
+ {% endfor -%}
+ {% endif -%}
+ no shut
+ exit
+interface GigabitEthernet8
+ {% if vlans|length > 1 -%}
+ {% for vlan_id, vlan in vlans.items() -%}
+ {% if vlan["native"] == True -%}
+ switchport trunk native vlan {{ vlan_id }}
+ {% endif -%}
+ {% endfor -%}
+ switchport mode trunk
+ switchport trunk allowed vlan all
+ {% else -%}
+ switchport mode access
+ {% for vlan_id, vlan in vlans.items() -%}
+ {% if vlan["native"] == True -%}
+ switchport trunk native vlan {{ vlan_id }}
+ {% endif -%}
+ {% endfor -%}
+ {% endif -%}
+ no shut
+ exit
+!
+line con 0
+ exec-timeout 30 0
+ transport preferred none
+ stopbits 1
+ exit
+line vty 0 4
+ access-class ACL-SSH-IN in
+ exec-timeout 30 0
+ privilege level 15
+ logging synchronous
+ transport input ssh
+ exit
+!
+ip route 0.0.0.0 0.0.0.0 dhcp 128
+!
+{% if wan_type == "PPPoE" -%}
+{% for pfwd_id, pfwd in port_forwards.items() -%}
+ip nat inside source static {{ pfwd["protocol"] }} {{ pfwd["destination"] }} {{ pfwd["dst_port"] }} interface Dialer0 {{ pfwd["src_port"] }}
+{% endfor -%}
+ip nat inside source list ACL-NAT interface Dialer0 overload
+{% else -%}
+{% for pfwd_id, pfwd in port_forwards.items() -%}
+ip nat inside source static {{ pfwd["protocol"] }} {{ pfwd["destination"] }} {{ pfwd["dst_port"] }} interface Vlan50 {{ pfwd["src_port"] }}
+{% endfor -%}
+ip nat inside source list ACL-NAT interface Vlan50 overload
+{% endif -%}
+!
+end

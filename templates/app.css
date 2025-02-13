@@ -1,0 +1,263 @@
+*{
+    box-sizing: border-box;
+}
+
+body {
+    background-color: rgb(204, 179, 236);
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: auto;
+    margin-bottom: auto;
+    font-family: Arial, Helvetica, sans-serif;
+    color:black;
+}
+
+.topbar {
+    width:100%;
+    background-color: rgb(139, 109, 174);
+    padding: 15px 22px;
+    color:white;
+    margin-left: auto;
+    margin-right: auto;
+    overflow:hidden;
+    /*background-image: url("flowerpattern.jpg");*/
+}
+
+.sidebar {
+    background-color: white;
+    border-radius: 25px;
+    width: 55px;
+    height: fit-content;
+    z-index: 1;
+    margin: auto;
+    position: absolute;
+    offset-distance: 120;
+    display: inline-block;
+    text-align: center;
+    box-sizing: border-box;
+    transition: 0.2s;
+}
+
+
+.sidebutton {
+    width:50px;
+    height:50px;
+    padding:5%;
+    margin:5%;
+    border-radius:50%;
+    border-color:rgb(103, 80, 130);
+    color:white;
+    background: rgb(139, 109, 174);
+    font-weight: bold;
+}
+
+#importfile{
+    background-color: white;
+    width:100%;
+    height:100%;
+    border-radius: 50%;
+    display: block;
+    cursor: pointer;
+    z-index: 2;
+    opacity: 0;
+}
+
+#additems {
+    font-size:xx-large;
+}
+
+#deleteitem {
+    background-image: url("../static/3481306.png");
+    background-repeat: no-repeat;
+    background-size: cover;
+}
+
+#import {
+    background-image: url("../static/importsign.png");
+    background-repeat: no-repeat;
+    background-size: cover;
+    box-sizing: border-box;
+    text-align: center;
+    display: block;
+    padding:5%;
+    margin:5%;
+    cursor: default;
+}
+
+#export{
+    background-image: url("../static/exportsign.png");
+    background-repeat: no-repeat;
+    background-size: cover;
+}
+
+.sidebaroptions{
+    border-radius: 20px;
+    height: 80px;
+    width: 180px;
+    z-index: 1;
+    right: 140px;
+    margin: auto;
+    position: absolute;
+    offset-distance: 120;
+    transition: width 0.3s;
+    transition-duration: 1;
+    opacity: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center; /*buttons go off text align*/
+    align-items: center;
+}
+
+
+.sidebarbutton{
+    width:100%;
+    height:50%;
+    margin:2%;
+    padding:2%;
+    border-radius:20px;
+    border: 2px solid white;
+    color:white;
+    background: rgb(139, 109, 174);
+    font-weight: bold;
+}
+
+
+.sidebutton:hover, .sidebarbutton:hover{
+    cursor:pointer;
+    border: 4px solid rgb(96, 76, 118);
+    background-color:  rgb(121, 94, 152);
+}
+.Container {
+    display:block;
+    max-width:80%;
+    width:600px; /*will change to 600px when doing the other options*/
+    /* MARGINS MAY BE REASON FOR LACK OF CENTERING*/
+    margin-left: auto;
+    margin-right: auto;
+}
+
+
+
+.System {
+    background-color: rgb(253, 250, 255);
+    border-radius: 5px;
+    display:grid;
+    grid-template-columns: repeat(1,auto);
+    padding: 20px 10px;
+    margin: 10px;
+    width: 100%;
+    text-align: center;
+}
+
+.Vlan, .PF{
+    background-color: rgb(253, 250, 255);
+    border-radius: 5px;
+    display:grid;
+    grid-template-columns: repeat(1,auto);
+    padding: 20px 10px;
+    margin: 10px;
+    width: 100%;
+    text-align: center;
+}
+
+.System:hover, .Vlan:hover, .PF:hover{
+    border: 2px solid rgb(158, 116, 166);
+    box-shadow: 5px 5px 0 0 rgb(124, 92, 135);
+    border-width: 2px;
+}
+
+.Button {
+    border-radius: 5px;
+    border-color:rgb(103, 80, 130);
+    color:white;
+    background: rgb(139, 109, 174);
+    padding: 20px 10px;
+    margin: 10px;
+    width: 100%;
+    font-size: large;
+    display: grid;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+}
+
+.Button:hover{
+    cursor:pointer;
+    border: 4px solid rgb(96, 76, 118);
+    background-color:  rgb(121, 94, 152);
+}
+
+select {
+    width: 90%;
+    padding-top: 15px;
+    padding-bottom:15px;
+    border:none;
+    background: rgb(255, 255, 255);
+    border-radius: 3px;
+    margin-left:auto;
+    margin-right:auto;
+    margin-top:10px;
+    margin-bottom:10px;
+    cursor:pointer;
+}
+
+input[type="checkbox"]{
+    cursor:pointer;
+}
+
+label {
+    font-size:medium;
+}
+
+select {
+    font-size: medium;
+}
+
+input[type="text"], input[type="checkbox"], input[type="password"] {
+    width: 90%;
+    padding-top: 15px;
+    padding-bottom:15px;
+    border:none;
+    background: rgb(255, 255, 255);
+    border-radius: 3px;
+    margin-left:auto;
+    margin-right:auto;
+    margin-top:10px;
+    margin-bottom:10px;
+    color:black;
+    font-size: medium;
+}
+
+input[type="text"]:hover, input[type="password"]:hover, select:hover {
+    border: 1px solid rgb(158, 116, 166);
+}
+
+
+.err{
+    color: red;
+    font-size: small;
+    border: 0px;
+    /*top right bottom left*/
+    padding:10px 0 20px;
+}
+
+.hide {
+    display:none;
+}
+
+.chatbot{
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    width: 5vmax;
+    height: 5vmax;
+    z-index: 1;
+    cursor: pointer;
+}
+.chatbot:hover{
+    width: 6vmax;
+    height: 6vmax;
+}
+
+
+
