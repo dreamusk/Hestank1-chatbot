@@ -73,7 +73,7 @@ body {
 }
 
 #import {
-    background-image: url("./importsign.png");
+    background-image: url("./exportsign.png");
     background-repeat: no-repeat;
     background-size: cover;
     box-sizing: border-box;
@@ -85,7 +85,7 @@ body {
 }
 
 #export{
-    background-image: url("./exportsign.png");
+    background-image: url("./importsign.png");
     background-repeat: no-repeat;
     background-size: cover;
 }
