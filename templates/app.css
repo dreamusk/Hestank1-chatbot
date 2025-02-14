@@ -67,13 +67,13 @@ body {
 }
 
 #deleteitem {
-    background-image: url("../templates/3481306.png");
+    background-image: url("./3481306.png");
     background-repeat: no-repeat;
     background-size: cover;
 }
 
 #import {
-    background-image: url("../templates/importsign.png");
+    background-image: url("./importsign.png");
     background-repeat: no-repeat;
     background-size: cover;
     box-sizing: border-box;
@@ -85,7 +85,7 @@ body {
 }
 
 #export{
-    background-image: url("../templates/exportsign.png");
+    background-image: url("./exportsign.png");
     background-repeat: no-repeat;
     background-size: cover;
 }
